@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>课程选坐</title>
+    <link rel="stylesheet" href="css/base.css" />
+    <link rel="stylesheet" href="css/common.css" />
+    <link rel="stylesheet" href="css/jquery.seat-charts.css" />
+    <link rel="stylesheet" href="css/style.css" />
+    <script src="js/jquery-1.10.2.min.js"></script>
+</head>
+<body>
+<div id="seat-map" style="margin-top:10px;">
+    <div class="coach-ico">教练</div>
+</div>
+<div class="seat-state-box">
+    <div class="clb">
+        <div class="fl kx-ste">可选</div>
+        <div class="fl yx-ste">已选</div>
+        <div class="fl yz-ste">已占</div>
+    </div>
+</div>
+<div class="booking-details none">
+    <ul id="selected-seats" class="clb">
+    </ul>
+</div>
+
+<div style="height:50px;"></div>
+
+<a href="#" class="pay-btn" style="display:none;">确认选坐</a>
+
+
+<script src="js/jquery.seat-charts.min.js"></script>
+<script>
+    var firstSeatLabel = 1;
+
+    $(document).ready(function() {
+        var $cart = $('#selected-seats'),
+            $counter = $('#counter'),
+            $total = $('#total'),
+            sc = $('#seat-map').seatCharts({
+                map: [
+                    'fffffffff',
+                    'fffffffff',
+                    'fffffffff',
+                    'fffffffff',
+                    'fffffffff',
+                    'fffffffff',
+                    'fffffffff',
+                    'fffffffff',
+                    'fffffffff',
+                ],
+                seats: {
+                    f: {
+                        price   : 100,
+                        classes : 'first-class', //your custom CSS class
+                        category: ''
+                    },
+                    e: {
+                        price   : 40,
+                        classes : 'economy-class', //your custom CSS class
+                        category: ''
+                    }
+
+                },
+                naming : {
+                    top : false,
+                    getLabel : function (character, row, column) {
+                        return firstSeatLabel++;
+                    },
+                },
+                legend : {
+                    node : $('#legend'),
+                    items : [
+
+                    ]
+                },
+                click: function () {
+                    if (this.status() == 'available') {
+                        $(".seat-state-box").hide();
+                        $(".booking-details").show();
+                        $(".pay-btn").show();
+
+                        var sid=this.settings.id;
+                        var hnum=sid.split("_")[0];
+                        var snum=sid.split("_")[1];
+                        $('<li>已选'+hnum+'排'+snum+'号座位<a href="#" class="cancel-cart-item"></a></li>')
+                            .attr('id','cart-item-'+this.settings.id)
+                            .data('seatId', this.settings.id)
+                            .appendTo($cart);
+                        $counter.text(sc.find('selected').length+1);
+                        $total.text(recalculateTotal(sc)+this.data().price);
+
+                        return 'selected';
+                    } else if (this.status() == 'selected') {
+                        //update the counter
+                        $counter.text(sc.find('selected').length-1);
+                        if(sc.find('selected').length-1==0){
+                            $(".seat-state-box").show();
+                            $(".booking-details").hide();
+                            $(".pay-btn").hide();
+                        }
+
+                        //and total
+                        $total.text(recalculateTotal(sc)-this.data().price);
+
+                        //remove the item from our cart
+                        $('#cart-item-'+this.settings.id).remove();
+
+                        //seat has been vacated
+                        return 'available';
+                    } else if (this.status() == 'unavailable') {
+                        //seat has been already booked
+                        return 'unavailable';
+                    } else {
+                        return this.style();
+                    }
+                }
+            });
+
+        //this will handle "[cancel]" link clicks
+        $('#selected-seats').on('click', '.cancel-cart-item', function () {
+            //let's just trigger Click event on the appropriate seat, so we don't have to repeat the logic here
+            sc.get($(this).parents('li:first').data('seatId')).click();
+        });
+        //let's pretend some seats have already been booked
+        sc.get(['1_2', '4_1', '7_1', '7_2']).status('unavailable');
+
+    });
+
+    function recalculateTotal(sc) {
+        var total = 0;
+
+        //basically find every selected seat and sum its price
+        sc.find('selected').each(function () {
+            total += this.data().price;
+        });
+
+        return total;
+    }
+
+</script>
+
+</body>
+</html>
